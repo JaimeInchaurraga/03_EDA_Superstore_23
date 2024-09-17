@@ -62,11 +62,6 @@ def analyze_dataset(df):
     analysis_df = pd.DataFrame(analysis)
     return analysis_df
 
-import pandas as pd
-import numpy as np
-
-import numpy as np
-import pandas as pd
 
 def detect_outliers(data, factor=1.5):
     """
@@ -129,7 +124,7 @@ def variabilidad(df, columns=None, high_dispersion_threshold=0.5, factor=1.5):
 
 
 
-
+# Gráfico de barras para mostrar distribución de categorías
 def pinta_distribucion_categoricas(df, columnas_categoricas, relativa=False, mostrar_valores=False):
     num_columnas = len(columnas_categoricas)
     num_filas = (num_columnas // 2) + (num_columnas % 2)
@@ -224,6 +219,61 @@ def plot_categorical_relationship_fin(df, cat_col1, cat_col2, relative_freq=Fals
 
         # Muestra el gráfico
         plt.show()
+
+
+# Gráfico de barras apiladas para ver la composición de una categoría dentro de otra
+def plot_categorical_composition(data, var1, var2):
+    """
+    Genera un gráfico de barras apiladas para mostrar la composición de una variable categórica (var2) 
+    dentro de otra (var1), ordenando por el total de ocurrencias de var1.
+
+    Parámetros:
+    data (pd.DataFrame): DataFrame con los datos.
+    var1 (str): Nombre de la primera variable categórica (por ejemplo, 'State').
+    var2 (str): Nombre de la segunda variable categórica (por ejemplo, 'Order Profitable?') que muestra la composición.
+    """
+    
+    # Crear tabla de proporciones de la variable categórica var1 y var2
+    counts = pd.crosstab(data[var1], data[var2])
+
+    # Calcular el total de pedidos sumando las categorías de var2 y ordenar por ese total
+    counts['Total Orders'] = counts.sum(axis=1)
+    counts_sorted_desc = counts.sort_values('Total Orders', ascending=True)
+
+    # Crear proporciones para apilado con las categorías ordenadas correctamente
+    proportions_sorted_desc = counts_sorted_desc.drop(columns='Total Orders').div(counts_sorted_desc['Total Orders'], axis=0)
+
+    # Generar una paleta de colores dependiendo del número de categorías en var2
+    num_categories = len(counts.columns) - 1  # Excluir 'Total Orders'
+    colors = sns.color_palette("Set3", num_categories)  # Paleta de colores con un número dinámico de colores
+
+    # Crear el gráfico de barras apiladas con colores dinámicos
+    fig, ax = plt.subplots(figsize=(10, 12))
+
+    # Crear el gráfico apilado con las categorías ordenadas correctamente
+    proportions_sorted_desc.plot(kind='barh', stacked=True, color=colors, ax=ax, edgecolor='none')
+
+    # Añadir los números de pedidos en cada barra
+    for i, (state, row) in enumerate(counts_sorted_desc.iterrows()):
+        total_orders = row['Total Orders']
+        ax.text(1.05, i, str(int(total_orders)), va='center', color='black', fontweight='bold')
+        for j, value in enumerate(row[:-1]):  # Excluir 'Total Orders' de las iteraciones
+            if value > 0:
+                x_position = row.cumsum()[j] - (value / 2)
+                ax.text(x_position / total_orders, i, str(int(value)), va='center', color='black')
+
+    # Añadir etiquetas y título
+    ax.set_xlabel('Proporción')
+    ax.set_ylabel(var1)
+    ax.set_title(f'Proporción de {var2} dentro de {var1} (ordenado por total)')
+
+    # Ajustar los márgenes para dejar más espacio en blanco en el margen derecho
+    plt.subplots_adjust(right=0.8)
+
+    # Mostrar el gráfico
+    plt.show()
+
+
 
 
 def plot_categorical_numerical_relationship(df, categorical_col, numerical_col, show_values=False, measure='mean'):
