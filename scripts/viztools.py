@@ -382,18 +382,44 @@ def plot_multiple_boxplots(df, columns, dim_matriz_visual = 2):
     plt.tight_layout()
     plt.show()
 
-def plot_grouped_boxplots(df, cat_col, num_col):
+# Gráfica para boxplots uniendo una variable categorica y otra numérica. Se pueden usar violines y muestra la densidad de cada variable teniendo en cuenta el número de valores totales por categoría (suuuper útil)
+
+def plot_grouped_plots(df, cat_col, num_col, plot_type='boxplot', median_color='red'):
+    """
+    Genera gráficos de cajas (boxplots) o violines (violin plots) con la opción de resaltar la mediana.
+    
+    Parámetros:
+    - df (DataFrame): El DataFrame que contiene los datos.
+    - cat_col (str): El nombre de la columna categórica.
+    - num_col (str): El nombre de la columna numérica.
+    - plot_type (str): El tipo de gráfico, puede ser 'boxplot' o 'violin'. Por defecto, es 'boxplot'.
+    - median_color (str): El color para resaltar la mediana. Por defecto, es 'red'.
+    """
+    
+    # Obtener las categorías únicas y su número
     unique_cats = df[cat_col].unique()
     num_cats = len(unique_cats)
-    group_size = 5
+    group_size = 5  # Cantidad de categorías por gráfico
 
+    # Bucle para dividir las categorías en grupos más pequeños
     for i in range(0, num_cats, group_size):
         subset_cats = unique_cats[i:i+group_size]
         subset_df = df[df[cat_col].isin(subset_cats)]
         
         plt.figure(figsize=(10, 6))
-        sns.boxplot(x=cat_col, y=num_col, data=subset_df)
-        plt.title(f'Boxplots of {num_col} for {cat_col} (Group {i//group_size + 1})')
+        
+        if plot_type == 'boxplot':
+            # Crear el boxplot y resaltar la mediana
+            sns.boxplot(x=cat_col, y=num_col, data=subset_df,
+                        medianprops=dict(color=median_color, linewidth=2))
+        elif plot_type == 'violin':
+            # Crear el violin plot con densidad ajustada al tamaño de los grupos
+            sns.violinplot(x=cat_col, y=num_col, data=subset_df, inner="quartile", cut=0, density_norm="count")
+            # Añadir la mediana con un boxplot reducido
+            sns.boxplot(x=cat_col, y=num_col, data=subset_df, whis=[0, 100], width=0.1, showfliers=False,
+                        medianprops=dict(color=median_color, linewidth=2))
+        
+        plt.title(f'{plot_type.capitalize()} of {num_col} for {cat_col} (Group {i//group_size + 1})')
         plt.xticks(rotation=45)
         plt.show()
 
@@ -479,6 +505,59 @@ def plot_histograms_huge_data(df, columns, limit, bins_large=100):
     
     # Mostrar la figura con los subplots
     plt.show()
+
+# Gráfica estilo lollipop, buena para ciertos casos de una varuable categorica y otra numerica
+
+def lollipop_plot(df, num_col, cat_col, agg_func='mean'):
+    """
+    Función para crear un gráfico lollipop horizontal que muestra la relación entre una variable categórica y una numérica.
+    
+    Parámetros:
+    - df (pd.DataFrame): El DataFrame que contiene los datos.
+    - num_col (str): El nombre de la columna numérica.
+    - cat_col (str): El nombre de la columna categórica.
+    - agg_func (str): La medida estadística a usar ('mean', 'median', 'sum', etc.). Por defecto es 'mean'.
+    
+    Retorna:
+    - Un gráfico lollipop horizontal.
+    """
+    
+    # Validar la medida estadística seleccionada
+    if agg_func not in ['mean', 'median', 'sum', 'min', 'max']:
+        raise ValueError("La medida debe ser una de las siguientes: 'mean', 'median', 'sum', 'min', 'max'")
+    
+    # Agrupar los datos según la categoría y calcular la medida numérica seleccionada
+    if agg_func == 'mean':
+        df_agg = df.groupby(cat_col)[num_col].mean().reset_index()
+    elif agg_func == 'median':
+        df_agg = df.groupby(cat_col)[num_col].median().reset_index()
+    elif agg_func == 'sum':
+        df_agg = df.groupby(cat_col)[num_col].sum().reset_index()
+    elif agg_func == 'min':
+        df_agg = df.groupby(cat_col)[num_col].min().reset_index()
+    elif agg_func == 'max':
+        df_agg = df.groupby(cat_col)[num_col].max().reset_index()
+    
+    # Reordenar según los valores de la columna numérica
+    ordered_df = df_agg.sort_values(by=num_col)
+    my_range = range(1, len(ordered_df.index) + 1)
+
+    # Crear el lollipop plot horizontal
+    plt.figure(figsize=(10, 6))
+    plt.hlines(y=my_range, xmin=0, xmax=ordered_df[num_col], color='skyblue')
+    plt.plot(ordered_df[num_col], my_range, "o", color='skyblue')
+
+    # Añadir títulos y nombres de ejes
+    plt.yticks(my_range, ordered_df[cat_col])
+    plt.title(f'{agg_func.capitalize()} de {num_col} por {cat_col}', loc='center')
+    plt.xlabel(f'{agg_func.capitalize()} de {num_col}')
+    plt.ylabel(cat_col)
+
+    # Mostrar la gráfica
+    plt.show()
+
+
+
 
 def grafico_dispersion_con_correlacion(df, columna_x, columna_y, tamano_puntos=50, mostrar_correlacion=False):
     """
@@ -566,4 +645,40 @@ def plot_stacked_bar_periodos(df, time_column, value_column, period='months'):
     plt.legend(title='Year')
     plt.xticks(rotation=45)
     plt.tight_layout()
+    plt.show()
+
+def plot_order_profitability_by_discount(df, discount_col, profitability_col):
+    """
+    Esta función crea un gráfico de barras apiladas para mostrar la rentabilidad de los pedidos
+    según el nivel de descuento, y añade el número total de pedidos en la parte superior de cada barra.
+    
+    Parámetros:
+    - df (DataFrame): El DataFrame que contiene los datos.
+    - discount_col (str): El nombre de la columna que contiene los niveles de descuento.
+    - profitability_col (str): El nombre de la columna que contiene la información de si el pedido fue rentable o no.
+    """
+    # Agrupar los datos por nivel de descuento y si fue rentable o no, y contar el número de pedidos
+    counts = df.groupby([discount_col, profitability_col]).size().unstack(fill_value=0)
+
+    # Calcular el porcentaje de cada categoría dentro de cada nivel de descuento
+    percentages = counts.div(counts.sum(axis=1), axis=0)
+
+    # Crear el gráfico de barras apiladas
+    ax = percentages.plot(kind='bar', stacked=True, figsize=(12, 8), colormap='Set1')
+
+    # Añadir el número total de pedidos en la parte superior de cada barra
+    totals = counts.sum(axis=1)
+    for i, total in enumerate(totals):
+        ax.text(i, 1.02, f'{total}', ha='center', va='bottom', fontsize=10, fontweight='bold')
+
+    # Añadir etiquetas y título
+    plt.xlabel('Discount Level')
+    plt.ylabel('Percentage of Orders')
+    plt.title('Order Profitability by Discount Level')
+    plt.legend(title='Order Profitable?', bbox_to_anchor=(1.05, 1), loc='upper left')
+
+    # Ajustar el diseño
+    plt.tight_layout()
+
+    # Mostrar el gráfico
     plt.show()
