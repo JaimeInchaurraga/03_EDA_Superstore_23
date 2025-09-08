@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt 
 import seaborn as sns
 import pandas as pd
 import numpy as np
@@ -423,7 +423,37 @@ def plot_grouped_plots(df, cat_col, num_col, plot_type='boxplot', median_color='
         plt.xticks(rotation=45)
         plt.show()
 
+def plot_grouped_plots_2(df, category_var, profit_var, threshold=500):
+    """
+    Función para crear gráficos de distribución de 'Profit' por 'Category', con valores cercanos a cero y con outliers.
 
+    Parámetros:
+    df (DataFrame): El DataFrame que contiene los datos.
+    category_var (str): El nombre de la columna que contiene las categorías.
+    profit_var (str): El nombre de la columna que contiene las ganancias (Profit).
+    threshold (int, opcional): El umbral para filtrar los valores cercanos a cero. Valor por defecto: 500.
+    """
+
+    # Filtrar los datos cercanos a cero
+    df_cerca_cero = df[(df[profit_var] >= -threshold) & (df[profit_var] <= threshold)]
+
+    # Crear la figura con dos gráficos
+    fig, axes = plt.subplots(2, 1, figsize=(10, 10), gridspec_kw={'height_ratios': [2, 1]})
+
+    # Gráfico 1: Valores cercanos a cero
+    sns.boxenplot(x=category_var, y=profit_var, data=df_cerca_cero, ax=axes[0])
+    axes[0].set_title(f'Distribución de {profit_var} por {category_var} (Valores Cercanos a Cero)')
+    axes[0].set_ylim(-threshold, threshold)
+
+    # Gráfico 2: Todos los valores, incluyendo outliers
+    sns.boxenplot(x=category_var, y=profit_var, data=df, ax=axes[1])
+    axes[1].set_title(f'Distribución de {profit_var} por {category_var} (Incluyendo Outliers)')
+    axes[1].set_ylim(df[profit_var].min(), df[profit_var].max())
+
+    # Ajustar el diseño
+    plt.tight_layout()
+    plt.show()
+    
 def plot_histo_den(df, columns):
     num_cols = len(columns)
     num_rows = num_cols // 2 + num_cols % 2
